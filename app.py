@@ -107,14 +107,17 @@ with col2:
         formatted_recommendations = format_recommendations(recommendations)
 
         # レコメンド結果を表示
-    st.markdown(
-        f"""
-        <div style='background-color: black; color: white; padding: 10px; border-radius: 10px;'>
-            {formatted_recommendations.replace('\n', '<br>')}
-        </div>
-        """, 
-        unsafe_allow_html=True
-    )
+    if formatted_recommendations:
+        st.markdown(
+            f"""
+            <div style='background-color: black; color: white; padding: 10px; border-radius: 10px;'>
+                {formatted_recommendations.replace('\n', '<br>')}
+            </div>
+            """, 
+            unsafe_allow_html=True
+        )
+    else:
+        st.write("レコメンド結果が見つかりませんでした。")
 
 # 右側に商品選択と検索を表示
 with col3:
