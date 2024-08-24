@@ -19,20 +19,41 @@ def get_wine_recommendations(product, occasion, recipient, budget):
     return response.choices[0].message.content
 
 # Streamlitアプリの設定
-st.title('ワインギフトレコメンドアプリ')
+st.title('🍷ワインギフトレコメンドアプリ🍷')
 
 st.write('贈る相手や目的に応じて、ワインギフトを5つ提案します。')
 
-# ユーザー入力
-product = st.text_input('商品', 'ワイン')
-occasion = st.text_input('目的', '昇進祝のプレゼント')
-recipient = st.text_input('プレゼント相手', '女性の上司')
-budget = st.text_input('金額', '50-100USD')
 
-if st.button('レコメンドを表示'):
-    # GPT-4 APIを呼び出してレコメンドを取得
-    recommendations = get_wine_recommendations(product, occasion, recipient, budget)
-    
-    # レコメンドの表示
-    st.subheader('おすすめのワイン')
-    st.text(recommendations)
+# 3列レイアウト作成
+col1, col2, col3 = st.columns([1, 2, 1])
+
+# 左側にユーザー入力欄
+with col1:
+    st.header('🎁 ユーザー入力')
+    with st.form(key='user_input_form'):
+        product = st.text_input('商品', 'ワイン')
+        occasion = st.text_input('目的', '昇進祝のプレゼント')
+        recipient = st.text_input('プレゼント相手', '女性の上司')
+        budget = st.text_input('金額', '50-100USD')
+        
+        submit_button = st.form_submit_button(label='レコメンドを表示')
+
+# 中央にレコメンド結果
+with col2:
+    if submit_button:
+        st.header('🍾 レコメンド結果')
+        recommendations = get_wine_recommendations(product, occasion, recipient, budget)
+
+        st.markdown(
+            f"""
+            <div style='background-color: black; color: white; padding: 10px; border-radius: 10px;'>
+                {recommendations.replace('\n', '<br>')}
+            </div>
+            """, 
+            unsafe_allow_html=True
+        )
+
+# 右側に空白スペースや追加情報
+with col3:
+    st.header('📚 購入先')
+    st.info("購入先情報をここに表示します。")
