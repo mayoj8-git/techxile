@@ -1,31 +1,82 @@
 import streamlit as st
 import openai
+import requests
+import json
+
+st.set_page_config(layout="wide")
+
 
 # OpenAI APIキーの設定
 openai.api_key = st.secrets["OPENAI_API_KEY"]
+RAKUTEN_APP_ID = ""
 
+ 
 def get_wine_recommendations(product, occasion, recipient, budget):
     # ChatGPT 4を使用したワインのレコメンド
-    response = openai.chat.completions.create(
+    response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",  # GPT-4モデルを指定
         messages=[
             {"role": "system", "content": "あなたはワインの専門家です。日本語で回答してください。"},
             {"role": "user", "content": f"Please recommend 5 wines for a {occasion} gift to a {recipient} with a budget of {budget}. "
-                                        f"For each wine, provide the name, price, and a brief description (less than 300 characters) of its story or background."}
+                                        f"For each wine, provide the name followed by a colon, price, and a brief description (less than 300 characters) of its story or background."}
         ],
         max_tokens=700  # GPT-4では、出力の精度が高いので少し多めに
     )
-    
     return response.choices[0].message.content
 
-# Streamlitアプリの設定
-st.title('🍷ワインギフトレコメンドアプリ🍷')
+def format_recommendations(recommendations):
+    # 商品名の後にコロンを付与する処理
+    formatted_recommendations = []
+    
+    for line in recommendations.split("\n"):
+        line = line.strip()
+        if line:
+            # 最初の単語を商品名として扱い、それ以降を説明とする
+            parts = line.split(" ", 1)
+            if len(parts) == 2:
+                product_name = parts[0] + ":"  # 商品名にコロンを付ける
+                description = parts[1]
+                formatted_recommendations.append(f"{product_name} {description}")
+            else:
+                # 行が空の場合や、正しい形式でない場合
+                formatted_recommendations.append(line)
+    
+    return "\n".join(formatted_recommendations)
 
-st.write('贈る相手や目的に応じて、ワインギフトを5つ提案します。')
+def search_rakuten(product_name):
+    # キーワードの長さを128文字に制限
+    if len(product_name) > 128:
+        product_name = product_name[:128]
+    
+    url = "https://app.rakuten.co.jp/services/api/IchibaItem/Search/20170706"
+    
+    params = {
+        "format": "json",
+        "keyword": product_name,  # selected_wineの商品名をここで使用
+        "applicationId": RAKUTEN_APP_ID,
+        "hits": 3
+    }
+    
+    try:
+        response = requests.get(url, params=params)
+        
+        # ステータスコードを確認
+        if response.status_code == 200:
+            return response.json()
+        else:
+            st.error(f"楽天APIリクエスト失敗: ステータスコード {response.status_code}")
+            st.write(response.text)  # エラーメッセージを表示してデバッグ
+            return None
 
+    except requests.exceptions.RequestException as e:
+        st.error(f"楽天APIリクエスト中にエラーが発生しました: {e}")
+        return None
+
+# Streamlitのデザイン設計
+st.title('🍷 ワインギフトレコメンドアプリ 🍷')
 
 # 3列レイアウト作成
-col1, col2, col3 = st.columns([1, 2, 1])
+col1, col2, col3 = st.columns([1, 2, 3])
 
 # 左側にユーザー入力欄
 with col1:
@@ -40,20 +91,47 @@ with col1:
 
 # 中央にレコメンド結果
 with col2:
-    if submit_button:
-        st.header('🍾 レコメンド結果')
-        recommendations = get_wine_recommendations(product, occasion, recipient, budget)
+    
+    st.header('🍾 レコメンド結果')
+    # レコメンド結果を取得
+    recommendations = get_wine_recommendations(product, occasion, recipient, budget)
+    
+    # 商品名の後にコロンを付与する
+    formatted_recommendations = format_recommendations(recommendations)
 
-        st.markdown(
-            f"""
-            <div style='background-color: black; color: white; padding: 10px; border-radius: 10px;'>
-                {recommendations.replace('\n', '<br>')}
-            </div>
-            """, 
-            unsafe_allow_html=True
-        )
+        # レコメンド結果を表示
+    st.markdown(
+        f"""
+        <div style='background-color: black; color: white; padding: 10px; border-radius: 10px;'>
+            {recommendations.replace('\n', '<br>')}
+        </div>
+        """, 
+        unsafe_allow_html=True
+    )
 
-# 右側に空白スペースや追加情報
+# 右側に商品選択と検索を表示
 with col3:
-    st.header('📚 購入先')
-    st.info("購入先情報をここに表示します。")
+    # 商品選択ボタン
+    st.header("🛒 購入したいワインを選択してください")
+    wine_options = []
+    for line in recommendations.split("\n"):
+        line = line.strip()
+        if ":" in line:
+            wine_name = line.split(":")[0].strip()  # コロンの前を商品名として抽出
+            wine_options.append(wine_name)
+    selected_wine = st.selectbox("ワインを選んでください", wine_options)
+
+    # 楽天市場で商品を検索
+    if st.button('楽天市場で検索'):
+        st.header(f"'{selected_wine}' の検索結果")
+
+        results = search_rakuten(selected_wine)
+        if 'Items' in results:
+            for item in results['Items'][:3]:
+                item_info = item['Item']
+                st.image(item_info['mediumImageUrls'][0]['imageUrl'], width=100)
+                st.write(f"商品名: {item_info['itemName']}")
+                st.write(f"価格: {item_info['itemPrice']} 円")
+                st.write(f"[楽天市場で見る]({item_info['itemUrl']})")
+        else:
+            st.write("検索結果が見つかりませんでした。")
