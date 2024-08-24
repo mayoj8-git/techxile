@@ -3,12 +3,6 @@ import openai
 import requests
 import json
 
-# OpenAI APIキーの設定
-if "OPENAI_API_KEY" in st.secrets:
-    openai.api_key = st.secrets["OPENAI_API_KEY"]
-else:
-    st.error("OPENAI_API_KEYがsecretsに設定されていません。")
-
 st.set_page_config(layout="wide")
 
 
@@ -48,7 +42,7 @@ def format_recommendations(recommendations):
     
     return "\n".join(formatted_recommendations)
 
-def search_rakuten(product_name):
+ def search_rakuten(product_name, min_price=None, max_price=None):
     # キーワードの長さを128文字に制限
     if len(product_name) > 128:
         product_name = product_name[:128]
@@ -62,14 +56,19 @@ def search_rakuten(product_name):
         "hits": 3
     }
     
+    if min_price and max_price:
+        params["minPrice"] = min_price
+        params["maxPrice"] = max_price
+    
+    # APIリクエストを実行
+    response = requests.get(url, params=params)
+    
     try:
         response = requests.get(url, params=params)
         
         # ステータスコードを確認
         if response.status_code == 200:
-            data = response.json()
-            st.write("APIレスポンス:", data)  # デバッグ用のレスポンス出力
-            return data
+            return response.json()
         else:
             st.error(f"楽天APIリクエスト失敗: ステータスコード {response.status_code}")
             st.write(response.text)  # エラーメッセージを表示してデバッグ
@@ -80,7 +79,7 @@ def search_rakuten(product_name):
         return None
 
 # Streamlitのデザイン設計
-st.title('🍷 ワインギフトレコメンドアプリ 🍷')
+st.title('🍷 ギフト用ワインレコメンドアプリ 🍷')
 
 # 3列レイアウト作成
 col1, col2, col3 = st.columns([1, 2, 3])
@@ -100,10 +99,6 @@ with col1:
         
         submit_button = st.form_submit_button(label='レコメンドを表示')
 
-# 初期化: レコメンド結果を保持するための session_state を使用
-if 'recommendations' not in st.session_state:
-    st.session_state.recommendations = None
-
 # レコメンド結果を表示および保存
 if submit_button:
     recommendations = get_wine_recommendations(product, occasion, recipient, budget)
@@ -114,7 +109,6 @@ with col2:
     
     st.header('🍾 レコメンド結果')
     # レコメンド結果を取得
-    formatted_recommendations = ""  # ここで変数を初期化
     if st.session_state.recommendations:
         recommendations = st.session_state.recommendations
         formatted_recommendations = format_recommendations(recommendations)
@@ -137,19 +131,15 @@ with col3:
     # 商品選択ボタン
     st.header("🛒 購入したいワインを選択してください")
 
-    wine_options = []
     if st.session_state.recommendations:
         # 商品名を抽出して選択肢にする
+        wine_options = []
         for line in st.session_state.recommendations.split("\n"):
             line = line.strip()
             if ":" in line:
                 wine_name = line.split(":")[0].strip()  # コロンの前を商品名として抽出
                 wine_options.append(wine_name)
 
-    # ワインの選択肢がない場合の処理
-    if not wine_options:
-        st.write("レコメンド結果が見つかりませんでした。")
-    else:
         selected_wine = st.selectbox("ワインを選んでください", wine_options)
 
     # 楽天市場で商品を検索
@@ -157,7 +147,7 @@ with col3:
         st.header(f"'{selected_wine}' の検索結果")
 
         results = search_rakuten(selected_wine)
-        if results and 'Items' in results:
+        if 'Items' in results:
             for item in results['Items'][:3]:
                 item_info = item['Item']
                 st.image(item_info['mediumImageUrls'][0]['imageUrl'], width=100)
