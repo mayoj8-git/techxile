@@ -10,7 +10,6 @@ st.set_page_config(layout="wide")
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 RAKUTEN_APP_ID = ""
 
-
 def get_wine_recommendations(product, occasion, recipient, budget):
     # ChatGPT 4を使用したワインのレコメンド
     response = openai.ChatCompletion.create(
@@ -111,7 +110,7 @@ with col2:
     st.markdown(
         f"""
         <div style='background-color: black; color: white; padding: 10px; border-radius: 10px;'>
-            {recommendations.replace('\n', '<br>')}
+            {formatted_recommendations.replace('\n', '<br>')}
         </div>
         """, 
         unsafe_allow_html=True
