@@ -10,7 +10,7 @@ st.set_page_config(layout="wide")
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 RAKUTEN_APP_ID = ""
 
- 
+
 def get_wine_recommendations(product, occasion, recipient, budget):
     # ChatGPT 4を使用したワインのレコメンド
     response = openai.ChatCompletion.create(
@@ -78,6 +78,10 @@ st.title('🍷 ワインギフトレコメンドアプリ 🍷')
 # 3列レイアウト作成
 col1, col2, col3 = st.columns([1, 2, 3])
 
+# 初期化: レコメンド結果を保持するための session_state を使用
+if 'recommendations' not in st.session_state:
+    st.session_state.recommendations = None
+
 # 左側にユーザー入力欄
 with col1:
     st.header('🎁 ユーザー入力')
@@ -89,15 +93,19 @@ with col1:
         
         submit_button = st.form_submit_button(label='レコメンドを表示')
 
+# レコメンド結果を表示および保存
+if submit_button:
+    recommendations = get_wine_recommendations(product, occasion, recipient, budget)
+    st.session_state.recommendations = recommendations
+
 # 中央にレコメンド結果
 with col2:
     
     st.header('🍾 レコメンド結果')
     # レコメンド結果を取得
-    recommendations = get_wine_recommendations(product, occasion, recipient, budget)
-    
-    # 商品名の後にコロンを付与する
-    formatted_recommendations = format_recommendations(recommendations)
+    if st.session_state.recommendations:
+        recommendations = st.session_state.recommendations
+        formatted_recommendations = format_recommendations(recommendations)
 
         # レコメンド結果を表示
     st.markdown(
@@ -113,13 +121,17 @@ with col2:
 with col3:
     # 商品選択ボタン
     st.header("🛒 購入したいワインを選択してください")
-    wine_options = []
-    for line in recommendations.split("\n"):
-        line = line.strip()
-        if ":" in line:
-            wine_name = line.split(":")[0].strip()  # コロンの前を商品名として抽出
-            wine_options.append(wine_name)
-    selected_wine = st.selectbox("ワインを選んでください", wine_options)
+
+    if st.session_state.recommendations:
+        # 商品名を抽出して選択肢にする
+        wine_options = []
+        for line in st.session_state.recommendations.split("\n"):
+            line = line.strip()
+            if ":" in line:
+                wine_name = line.split(":")[0].strip()  # コロンの前を商品名として抽出
+                wine_options.append(wine_name)
+
+        selected_wine = st.selectbox("ワインを選んでください", wine_options)
 
     # 楽天市場で商品を検索
     if st.button('楽天市場で検索'):
