@@ -42,7 +42,7 @@ def format_recommendations(recommendations):
     
     return "\n".join(formatted_recommendations)
 
- def search_rakuten(product_name, min_price=None, max_price=None):
+def search_rakuten(product_name, min_price=None, max_price=None):
     # キーワードの長さを128文字に制限
     if len(product_name) > 128:
         product_name = product_name[:128]
