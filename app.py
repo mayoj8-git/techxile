@@ -97,7 +97,7 @@ if submit_button:
     recommendations = get_wine_recommendations(product, occasion, recipient, budget)
     st.session_state.recommendations = recommendations
 
-# 中央にレコメンド結果
+ # 中央にレコメンド結果
 with col2:
     
     st.header('🍾 レコメンド結果')
@@ -106,8 +106,8 @@ with col2:
         recommendations = st.session_state.recommendations
         formatted_recommendations = format_recommendations(recommendations)
 
-        # レコメンド結果を表示
-    if formatted_recommendations:
+    # レコメンド結果が存在し、非空であるか確認してから表示
+    if formatted_recommendations and len(formatted_recommendations) > 0:
         st.markdown(
             f"""
             <div style='background-color: black; color: white; padding: 10px; border-radius: 10px;'>
@@ -149,3 +149,5 @@ with col3:
                 st.write(f"[楽天市場で見る]({item_info['itemUrl']})")
         else:
             st.write("検索結果が見つかりませんでした。")
+    else:
+            st.write("表示できるワインの選択肢がありません。")
