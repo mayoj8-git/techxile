@@ -104,15 +104,15 @@ if submit_button:
     recommendations = get_wine_recommendations(product, occasion, recipient, budget)
     st.session_state.recommendations = recommendations
 
- # 中央にレコメンド結果
+# 中央にレコメンド結果
 with col2:
-    
-    st.header('🍾 レコメンド結果')
+    st.header(':champagne: レコメンド結果')
+    # `formatted_recommendations` を初期化
+    formatted_recommendations = None
     # レコメンド結果を取得
     if st.session_state.recommendations:
         recommendations = st.session_state.recommendations
         formatted_recommendations = format_recommendations(recommendations)
-
     # レコメンド結果が存在し、非空であるか確認してから表示
     if formatted_recommendations and len(formatted_recommendations) > 0:
         st.markdown(
@@ -120,7 +120,7 @@ with col2:
             <div style='background-color: black; color: white; padding: 10px; border-radius: 10px;'>
                 {formatted_recommendations.replace('\n', '<br>')}
             </div>
-            """, 
+            """,
             unsafe_allow_html=True
         )
     else:
